@@ -1,7 +1,7 @@
 #Used by classifier and class_generator
 features_topic: "/audio_features_extraction/features"
 #Used by train and classifier
-classifier_name: 'modelSVMtemp'
+classifier_name: 'modelSVM'
 #Used by train and visualize
 classes:
   silence

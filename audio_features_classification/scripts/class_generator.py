@@ -63,13 +63,14 @@ def doaRawCallback(doaRaw):
 def featuresCallback(feat_msg):
     global prevTime, count, mtFeaturesMatrix, start_time
 
-    curFV = feat_msg.ltWin1mean + feat_msg.ltWin1deviation                                              # merge long term mean and std feature statistics (from the respective topic)        
+    # merge long term mean and std feature statistics (from the respective topic)
+    curFV = feat_msg.ltWin1mean + feat_msg.ltWin1deviation
     curFV = list(curFV)
     #print curFV[0]
     #del curFV[18]    
     #print feat_msg.ltWin1mean
     if count == 0:
-        start_time = feat_msg.time                                                                      # get current timestamp
+        start_time = feat_msg.time
 
     mtFeaturesMatrix.append(curFV)
     
@@ -87,8 +88,8 @@ def featuresCallback(feat_msg):
         ax2.set_ylim([0,20])
         plt.draw()
     '''
-    prevTime = feat_msg.time                                                                            # get current timestamp
-    count += 1                                                                                          # update global counter
+    prevTime = feat_msg.time
+    count += 1
 
 if __name__ == '__main__':
     initSubscriber()

@@ -35,7 +35,9 @@ def initSubscriber():
     modelName = rospy.get_param('~classifier_name', 'modelSVM')       
     sub_topic = rospy.get_param('~features_topic','/audio_features_extraction/features')
     pub_topic = rospy.get_param('~classification_topic','~audio_classification')
+
     [Classifier, MEAN, STD, classNames, mtWin, mtStep, stWin, stStep, computeBEAT] = audioTrainTest.loadSVModel(os.path.dirname(os.path.realpath(sys.argv[0]))+'/classifier_data/'+modelName)
+
     classifierInfo["Classifier"] = Classifier
     classifierInfo["MEAN"] = MEAN
     classifierInfo["STD"] = STD
@@ -45,10 +47,15 @@ def initSubscriber():
     classifierInfo["stWin"] = stWin
     classifierInfo["stStep"] = stStep
     classifierInfo["computeBEAT"] = computeBEAT
-    print MEAN
+
     classification_publisher = rospy.Publisher("~"+pub_topic, classificationResult, queue_size=10)
     features_subscriber = rospy.Subscriber(sub_topic, featMsg, featuresCallback)
+
+    print MEAN
+    print mtWin, mtStep, stWin, stStep, computeBEAT
+    print classNames
     print "Waiting for features_topic to be published..."
+
     rospy.spin()
 
 
@@ -68,6 +75,7 @@ def featuresCallback(feat_msg):
     EnergyThreshold = 0.90 * sum(energies)/float(len(energies)+0.00000001)
     if classResult == "silence":
         energies.append(curFVOr[0])
+        print "silence"
     else:
         if curFVOr[0] < EnergyThreshold:
             classResult = "silence"

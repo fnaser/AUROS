@@ -28,6 +28,8 @@ aux_source_directory(src SRC_LIST)
 
 add_executable(audio_features_extraction ${SRC_LIST})
 target_link_libraries( ${PROJECT_NAME} ${Boost_LIBRARIES} ${catkin_LIBRARIES} portaudiocpp fftw3 sndfile)
+add_dependencies(audio_features_extraction audio_features_msgs_generate_messages_cpp)
+
 
 file(GLOB_RECURSE  LIB_CPP "./src/*.cpp")
 file(GLOB_RECURSE  LIB_HDRS "./include/*.hpp")

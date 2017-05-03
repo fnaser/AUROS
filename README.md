@@ -47,6 +47,19 @@ For Ubuntu 15 use (ROS Jade):
 http://wiki.ros.org/jade/Installation/Ubuntu
 
 
+```
+sudo apt-get purge bluez-alsa
+sudo dpkg-reconfigure -p high jackd2
+sudo apt install jackd2
+sudo adduser <username> audio (restart afterwards)
+git clone https://github.com/tyiannak/pyAudioAnalysis.git
+sudo easy_install scipy
+sudo easy_install eyed3
+sudo esay_install pydub
+sudo easy_install pathlib
+sudo easy_install sklearn
+```
+
 - - - - - - - -
 EXECUTION INSTRUCTIONS
 - - - - - - - -

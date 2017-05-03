@@ -23,13 +23,11 @@
 #include <ctime>
 #include "audio_features_msgs/featMsg.h"
 
-
 namespace pa = portaudio;
 
 //////////////////////////////////////////
 // AUDIO FEED - RELATED FUNCTIONALITIES //
 //////////////////////////////////////////
-
 
 class RollingStats
 {
@@ -44,19 +42,31 @@ public:
         , aux_(ndim)
     {}
 
-    
-    Eigen::VectorXd mean() { return sum_ * (1.0 / buffer_.size()); }
-    Eigen::VectorXd std()  { return (nm1 * sum_sq_ + eps_ - nnm1 * sum_.cwiseProduct(sum_)).array().sqrt(); }
+
+    Eigen::VectorXd mean() {
+        return sum_ * (1.0 / buffer_.size());
+    }
+    Eigen::VectorXd std()  {
+        return (nm1 * sum_sq_ + eps_ - nnm1 * sum_.cwiseProduct(sum_)).array().sqrt();
+    }
     // Eigen::VectorXd std()  { return (nm1 * sum_sq_ - nnm1 * sum_.cwiseProduct(sum_)); }
 
-    std::vector<float> meanf() { auto m = mean(); for (unsigned i=0; i<aux_.size(); ++i) aux_[i] = m(i); return aux_; }
-    //std::vector<float> stdf() { auto m = std(); for (unsigned i=0; i<aux_.size(); ++i) {aux_[i] = m(i);} return aux_; }    
-    std::vector<float> stdf()  { auto m = std(); for (unsigned i=0; i<aux_.size(); ++i) aux_[i] = m(i); return aux_; }    
+    std::vector<float> meanf() {
+        auto m = mean();
+        for (unsigned i=0; i<aux_.size(); ++i) aux_[i] = m(i);
+        return aux_;
+    }
+    //std::vector<float> stdf() { auto m = std(); for (unsigned i=0; i<aux_.size(); ++i) {aux_[i] = m(i);} return aux_; }
+    std::vector<float> stdf()  {
+        auto m = std();
+        for (unsigned i=0; i<aux_.size(); ++i) aux_[i] = m(i);
+        return aux_;
+    }
     void push(const Eigen::VectorXd & val)
-    {        
+    {
         for (unsigned int i=0; i<val.size(); i++)
             if ((val(i) != val(i)) || (val(i) * val(i) != val(i) * val(i)))
-            {                
+            {
                 std::cout << val(i) << " " <<  i << std::endl;
                 //val(i) = 0;
             }
@@ -72,7 +82,9 @@ public:
         buffer_.push_back(val);
     }
 
-    bool ready() { return buffer_.full(); }
+    bool ready() {
+        return buffer_.full();
+    }
 
     const double nm1, nnm1;
 
@@ -82,10 +94,6 @@ private:
     std::vector<float> aux_;
 
 };
-
-
-
-
 
 
 class AudioFeed
@@ -249,7 +257,7 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "audio_features_extraction");
     ros::NodeHandle n("~");
     bool write_wav, write_features;
-    int stWin, ltWin1, ltWin2, window_type, window_param, fft_size, mel_filters, f_min, f_max, num_coefs;
+    int stWin, ltWin1, ltWin2, window_type, window_param, fft_size, mel_filters, f_min, f_max, num_coefs, default_id;
     std::string doa_serial_device;
 
     double frame_overlap, preemphasis_coeff, mel_filter_overlap;
@@ -280,22 +288,22 @@ int main(int argc, char* argv[])
     n.param("num_coefs", num_coefs, 13);
 
     n.param("doa_serial_device", doa_serial_device, std::string("/dev/ttyUSB0"));
-
+    n.param("default_id", default_id, int(0));
 
     std::unique_ptr<SerialDevice> SD;
     bool doaDeviceFound = false;
-    try 
+    try
     {
-        SD.reset(new SerialDevice(doa_serial_device, 2400)); 
-        doaDeviceFound = true;                              // open serial connection        
+        SD.reset(new SerialDevice(doa_serial_device, 2400));
+        doaDeviceFound = true;                              // open serial connection
     } catch (std::exception & e) {
-        std::cout << "MIC ARRAY DEVICE NOT FOUND";
+        std::cout << "MIC ARRAY DEVICE NOT FOUND" << std::endl;
     }
 
 
-    ros::Publisher pub = n.advertise<audio_features_msgs::featMsg>(featuresTopic, 1000);    
-    ros::Publisher pubDoaRaw = n.advertise<std_msgs::Int32>(doaTopicRaw, 1000);    
-    ros::Publisher pubDoaAngle = n.advertise<std_msgs::Int32>(doaTopicAngle, 1000);    
+    ros::Publisher pub = n.advertise<audio_features_msgs::featMsg>(featuresTopic, 1000);
+    ros::Publisher pubDoaRaw = n.advertise<std_msgs::Int32>(doaTopicRaw, 1000);
+    ros::Publisher pubDoaAngle = n.advertise<std_msgs::Int32>(doaTopicAngle, 1000);
 
     //Specify loop rate if you want
     //ros::Rate loop_rate(10);
@@ -315,46 +323,47 @@ int main(int argc, char* argv[])
     settings.put("mfcc.f_max", f_max);
     settings.put("mfcc.num_coefs", num_coefs);
 
-    std::cout << "Using " << pa::System::versionText() << "\n";
+    std::cout << "Using " << pa::System::versionText() << std::endl;
 
     if (exec_mode.compare("list-devices") == 0) {
         list_input_devices(pa::System::instance());
+        std::cout << "Planned shutdown" << "\n";
         return 1;
     }
 
     bool use_ltWin2 = false;
     bool reachedMaxSize = false;
 
-    if(ltWin2 == -1){
+    if(ltWin2 == -1) {
         use_ltWin2 = false;
     }
 
-    if(stWin % 10 != 0){
+    if(stWin % 10 != 0) {
         ROS_WARN("stWin is not multiple of 10. Using the default value of 20 instead.");
         stWin = 20;
     }
 
-    if(ltWin1 < 2){
+    if(ltWin1 < 2) {
         ROS_WARN("ltWin1 is less than 2. Using the default value of 50 instead.");
         ltWin1 = 50;
     }
 
-    if(ltWin2 < 2 && use_ltWin2){
+    if(ltWin2 < 2 && use_ltWin2) {
         ROS_WARN("ltWin2 is less than 2. Using the default value of 250 instead.");
         ltWin2 = 250;
     }
 
-    if(ltWin1 > 10000){
+    if(ltWin1 > 10000) {
         ROS_WARN("ltWin1 exceeds the value of 10000. Using the default value of 50 instead.");
         ltWin1 = 50;
     }
 
-    if(ltWin2 > 10000){
+    if(ltWin2 > 10000) {
         ROS_WARN("ltWin2 exceeds the value of 10000. Using the default value of 250 instead.");
         ltWin2 = 250;
     }
 
-    if(ltWin1 >= ltWin2 && use_ltWin2){
+    if(ltWin1 >= ltWin2 && use_ltWin2) {
         ROS_WARN("ltWin1 is not smaller than ltWin2. Using the default values of 50 and 250 respectively.");
         ltWin1 = 50;
         ltWin2 = 250;
@@ -371,24 +380,30 @@ int main(int argc, char* argv[])
 
     if (exec_mode.compare("device-input") == 0) {
         //Get default mic ID here
-        int default_id = 0;
+        //int default_id = 0;
         for (auto device = pa::System::instance().devicesBegin(); device != pa::System::instance().devicesEnd(); ++device) {
-            if (device->maxInputChannels() < 1){
+            if (device->maxInputChannels() < 1) {
                 continue;
             }
-            else if(std::string(device->name()).compare("default") == 0){
-                default_id = device->index();
+            else if(std::string(device->name()).compare("default") == 0) {
+                //default_id = device->index();
+                std::cout << "number of default id " << device->index() << std::endl;
             }
         }
         feed.reset(new AudioFeed(pa::System::instance(), default_id, settings.get<int>("frame_duration")));
         feed->stream_->start();
-        get_samples = [&](std::vector<float>& out) { return feed->fetch(out); };
+        get_samples = [&](std::vector<float>& out) {
+            return feed->fetch(out);
+        };
         Fs = feed->stream_params_.sampleRate();
+        std::cout << "audio stream started " << default_id << std::endl;
     } else if (exec_mode.compare("file-input") == 0) {
         pimp.reset(new AudioPimp(wav_filename, settings));
         pimp->show_info();
         Fs = pimp->samplerate;
-        get_samples = [&](std::vector<float>& out) { return pimp->get_samples(out); };
+        get_samples = [&](std::vector<float>& out) {
+            return pimp->get_samples(out);
+        };
     } else {
         throw std::runtime_error("No input specified. Use one of the list-devices, device-input or file-input options in the parameters.yaml file.");
     }
@@ -432,50 +447,48 @@ int main(int argc, char* argv[])
     RollingStats ltWin1_stats(2*(4 + mfcc.num_coefs), ltWin1);
     RollingStats ltWin2_stats(2*(4 + mfcc.num_coefs), ltWin2);
     std::vector<float> featVect(2*(4 + mfcc.num_coefs));
-    
+
 
     Eigen::VectorXd prevMFCC = Eigen::VectorXd::Zero(num_coefs);
     double prevE = 0.0;
     double prevZ = 0.0;
     double prevEE = 0.0;
-    double prevSC = 0.0;    
+    double prevSC = 0.0;
 
 
-    uint8_t _doa_raw;    
+    uint8_t _doa_raw;
 
-    while(ros::ok() && get_samples(s)){        
-    
-    if (doaDeviceFound)
-    {
-        SD->read(&_doa_raw);        
-        //int32_t doa_raw = static_cast<int32_t>(_doa_raw);
-        //std_msgs::Int32 doa_raw = static_cast<int32_t>(_doa_raw);
-        //std_msgs::Float32 doa_angle = -0.675265272712 * static_cast<int>(_doa_raw) + 78.044542802;
-        // std::cout << doa_raw << " " << doa_angle<< "\n";
-        std_msgs::Int32 doa_angle;
-        if (static_cast<int>(_doa_raw) == 255)
-            doa_angle.data = 0;            
-        else
-            doa_angle.data = -0.675265272712 * static_cast<int>(_doa_raw) + 78.044542802;
-        pubDoaAngle.publish(doa_angle);
+    while(ros::ok() && get_samples(s)) {
 
-        std_msgs::Int32 doa_raw;
-        doa_raw.data = _doa_raw;
-        pubDoaRaw.publish(doa_raw);
+        if (doaDeviceFound)
+        {
+            SD->read(&_doa_raw);
+            //int32_t doa_raw = static_cast<int32_t>(_doa_raw);
+            //std_msgs::Int32 doa_raw = static_cast<int32_t>(_doa_raw);
+            //std_msgs::Float32 doa_angle = -0.675265272712 * static_cast<int>(_doa_raw) + 78.044542802;
+            // std::cout << doa_raw << " " << doa_angle<< "\n";
+            std_msgs::Int32 doa_angle;
+            if (static_cast<int>(_doa_raw) == 255)
+                doa_angle.data = 0;
+            else
+                doa_angle.data = -0.675265272712 * static_cast<int>(_doa_raw) + 78.044542802;
+            pubDoaAngle.publish(doa_angle);
 
+            std_msgs::Int32 doa_raw;
+            doa_raw.data = _doa_raw;
+            pubDoaRaw.publish(doa_raw);
+        }
 
-    }    
-
-	float max = -100000;
-    float min = 100000;
-        for (unsigned j=0; j<scopy.size(); ++j){
-	    scopy[j] = s[j];
-	    if (max < scopy[j])
+        float max = -100000;
+        float min = 100000;
+        for (unsigned j=0; j<scopy.size(); ++j) {
+            scopy[j] = s[j];
+            if (max < scopy[j])
                 max = scopy[j];
-        if (min > scopy[j])
+            if (min > scopy[j])
                 min = scopy[j];
 
-	}
+        }
         // std::cout << min << " " << max << "\n";
         double E = energy(s);
         double Z = zcr(s);
@@ -492,15 +505,15 @@ int main(int argc, char* argv[])
         mfcc.bang(mfb.output);                                              // mfcc calculation
 
         featuresAll << E, Z, EE, SC, mfcc.output, E - prevE, Z - prevZ, E - prevEE, SC - prevSC, mfcc.output - prevMFCC;                           // merge features
-        
+
         // std::cout << "min Feature:" << featuresAll.maxCoeff() << "\n";
-        // std::cout << "max Feature:" << featuresAll.minCoeff() << "\n";        
+        // std::cout << "max Feature:" << featuresAll.minCoeff() << "\n";
         // std::cout << featuresAll << "\n\n\n\n";
-        prevMFCC = mfcc.output;        
+        prevMFCC = mfcc.output;
         prevE = E;
         prevZ = Z;
         prevEE = EE;
-        prevSC = SC;    
+        prevSC = SC;
 
         ltWin1_stats.push(featuresAll);
         ltWin2_stats.push(featuresAll);
@@ -579,19 +592,20 @@ int main(int argc, char* argv[])
         */
 
         audio_features_msgs::featMsg feat_msg;
-        
+
         //feat_msg.time = ((time_t)clock()/(double)CLOCKS_PER_SEC)*1000;//cpu time in ms
         ros::Time e_ros = ros::Time::now();
         double dur_ros = (e_ros-s_ros).toNSec() * 1e-9;
         feat_msg.time = dur_ros;
-        
+
         std::copy(featuresAll.data(), featuresAll.data() + featuresAll.size(), featVect.begin());
 
         feat_msg.features = featVect;
         feat_msg.ltWin1mean = ltWin1_stats.meanf();//ltWin1mean;
         feat_msg.ltWin1deviation = ltWin1_stats.stdf(); //ltWin1deviation;
         feat_msg.ltWin2mean = ltWin2_stats.meanf();//ltWin2mean;
-        feat_msg.ltWin2deviation = ltWin2_stats.stdf();//ltWin2deviation;    
+        feat_msg.ltWin2deviation = ltWin2_stats.stdf();//ltWin2deviation;
+        feat_msg.ltWin2deviation0 = feat_msg.ltWin2deviation[0];
 
         pub.publish(feat_msg);
 
@@ -619,4 +633,5 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
 
