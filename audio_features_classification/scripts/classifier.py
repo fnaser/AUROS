@@ -63,19 +63,22 @@ def featuresCallback(feat_msg):
     global mtFeaturesMatrix
     global classifierInfo, energies, classification_publisher
 
-    curFV = feat_msg.ltWin1mean + feat_msg.ltWin1deviation  #merge long term mean and std feature statistics (from the respective topic)        
+    # merge long term mean and std feature statistics (from the respective topic)        
+    curFV = feat_msg.ltWin1mean + feat_msg.ltWin1deviation
     curFV = list(curFV)
     #del curFV[18]    
 
     curFVOr = curFV
-    curFV = (curFV - classifierInfo["MEAN"]) / classifierInfo["STD"]                                # feature normalization                        
-    [Result, P] = audioTrainTest.classifierWrapper(classifierInfo["Classifier"], "svm", curFV)      # classification
+    # feature normalization
+    curFV = (curFV - classifierInfo["MEAN"]) / classifierInfo["STD"]
+    # classification
+    [Result, P] = audioTrainTest.classifierWrapper(classifierInfo["Classifier"], "svm", curFV)
     classResult = list(classifierInfo["classNames"])[int(Result)]
 
     EnergyThreshold = 0.90 * sum(energies)/float(len(energies)+0.00000001)
     if classResult == "silence":
         energies.append(curFVOr[0])
-        print "silence"
+        #print "silence"
     else:
         if curFVOr[0] < EnergyThreshold:
             classResult = "silence"
@@ -89,7 +92,8 @@ def featuresCallback(feat_msg):
     class_pub.probability.data = float(P[int(Result)])
     classification_publisher.publish(class_pub)
     #print curFVOr
-    print numpy.nonzero(numpy.isnan(numpy.array(curFVOr).mean(axis = 0))), classResult
+    #print numpy.nonzero(numpy.isnan(numpy.array(curFVOr).mean(axis = 0))), classResult
+    print "class: {0:s}\t{1:.3f}".format(classResult, class_pub.probability.data)
     
 if __name__ == '__main__':
     initSubscriber()

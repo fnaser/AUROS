@@ -59,7 +59,6 @@ def doaAngleCallback(doaTAngle):
 def doaRawCallback(doaRaw):
     print "B:" + str(doaRaw)
 
-
 def featuresCallback(feat_msg):
     global prevTime, count, mtFeaturesMatrix, start_time
 
