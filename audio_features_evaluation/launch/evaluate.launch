@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<launch>
+	<node pkg="audio_features_evaluation" type="evaluate.py" respawn="false" name="audio_features_evaluation_node" output="screen">
+		<rosparam file="$(find audio_features_classification)/config/parameters.yaml" command="load" />
+	</node>
+</launch>
