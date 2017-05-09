@@ -19,15 +19,16 @@ def classificationResultCallback(classification_msg):
    global count_cars_left
    global count_cars_right
 
-   if classification_msg.class_result == "cars":
+   if classification_msg.class_result.data == "cars":
       count_cars = count_cars + 1
 
-   if classification_msg.class_result == "cars_left":
+   if classification_msg.class_result.data == "cars_left":
       count_cars_left = count_cars_left + 1
 
-   if classification_msg.class_result == "cars_right":
+   if classification_msg.class_result.data == "cars_right":
       count_cars_right = count_cars_right + 1
 
+   #print classification_msg.class_result
    print "cars: {0:.3f}\t left: {1:.3f}\t right: {2:.3f}".format(count_cars, count_cars_left, count_cars_right)
 
 if __name__ == '__main__':
